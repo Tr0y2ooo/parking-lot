@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>停車場管理系統</title>
+
+<style>
+    *{
+        box-sizing:border-box;
+    }
+    
+    body{
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(135deg,#eef2f7,#f8fbff);
+        padding:40px 20px;
+        margin:0;
+    }
+    
+    .container{
+        max-width:1000px;
+        margin:auto;
+        background:white;
+        padding:35px;
+        border-radius:18px;
+        box-shadow:0 15px 40px rgba(0,0,0,0.08);
+    }
+    
+    h2{
+        margin-bottom:15px;
+        font-weight:600;
+        color:#333;
+    }
+    
+    hr{
+        border:none;
+        height:1px;
+        background:#eee;
+        margin:35px 0;
+    }
+    
+    input{
+        padding:10px 12px;
+        border-radius:10px;
+        border:1px solid #ddd;
+        width:200px;
+        transition:0.2s;
+    }
+    
+    input:focus{
+        outline:none;
+        border-color:#4a90e2;
+        box-shadow:0 0 0 3px rgba(74,144,226,0.15);
+    }
+    
+    button{
+        padding:10px 16px;
+        border:none;
+        border-radius:10px;
+        background:#4a90e2;
+        color:white;
+        cursor:pointer;
+        font-weight:500;
+        transition:0.2s;
+    }
+    
+    button:hover{
+        transform:translateY(-2px);
+        box-shadow:0 6px 15px rgba(0,0,0,0.15);
+    }
+    
+    button.active{
+        background:#ff9800;
+    }
+    
+    .section{
+        margin-bottom:30px;
+    }
+    
+    .card{
+        padding:18px;
+        background:#f7f9fc;
+        border-radius:14px;
+        margin-bottom:15px;
+        border:1px solid #eee;
+        transition:0.2s;
+    }
+    
+    .card:hover{
+        transform:translateY(-3px);
+        box-shadow:0 8px 20px rgba(0,0,0,0.08);
+    }
+    
+    .card button{
+        margin-top:10px;
+        background:#ff5252;
+    }
+    
+    .stat{
+        background:linear-gradient(135deg,#e8f5e9,#f1fff3);
+        padding:20px;
+        border-radius:16px;
+        font-size:16px;
+        border:1px solid #d8f0dc;
+    }
+    
+    #searchInput{
+        width:300px;
+        margin-bottom:20px;
+    }
+    
+    #currentMode{
+        font-weight:bold;
+        color:#ff9800;
+    }
+    /* ===== 深色模式 ===== */
+    body.dark{
+        background:#1e1f25;
+        color:#f1f1f1;
+    }
+
+    body.dark .container{
+        background:#2a2c34;
+        color:#f1f1f1;
+    }
+
+    body.dark h2,
+    body.dark p,
+    body.dark span,
+    body.dark div{
+        color:#f1f1f1;
+    }
+
+    body.dark .card{
+        background:#333641;
+        border:1px solid #444;
+        color:#ffffff;
+    }
+
+    body.dark input{
+        background:#3b3d46;
+        color:#ffffff;
+        border:1px solid #555;
+    }
+
+    body.dark input::placeholder{
+        color:#bbbbbb;
+    }
+
+    body.dark button{
+        background:#6c8cff;
+        color:white;
+    }
+
+    body.dark .stat{
+        background:#2e3a2f;
+        border:1px solid #3f5741;
+        color:#d8ffd8;
+    }
+
+    body.dark hr{
+        background:#444;
+    }
+
+    body.dark #currentMode{
+        color:#ffd54f;
+    }
+
+    
+    </style>
+    
+</head>
+
+<body>
+<div class="container">
+<button onclick="toggleDarkMode()" id="darkBtn">
+    🌙 深色模式
+    </button>        
+
+<hr>
+
+<h2>📅 計費模式</h2>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <button onclick="setMode('weekday')" id="weekdayBtn">平日模式</button>
+    <button onclick="setMode('holiday')" id="holidayBtn">假日模式</button>
+    <span>目前模式：<span id="currentMode">平日</span></span>
+</div>  
+
+<h2>🚗 汽車進場</h2>
+<input id="plateIn" placeholder="輸入車牌">
+<button onclick="carIn()">進場</button>
+
+<hr>
+
+<h2>🚗 場內車輛（即時）</h2>
+<input id="searchInput" 
+       placeholder="搜尋車牌..." 
+       oninput="filterCars()" 
+       style="margin-bottom:15px;width:50%;">
+<div id="carList"></div>
+
+<hr>
+
+<h2>💰 今日營收統計</h2>
+<div id="stats"></div>
+<div id="todayCount"></div>
+
+</div>
+
+<script type="module">
+let pricingMode = "weekday"; // 預設平日
+let currentCars = [];
+
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { 
+getFirestore, 
+doc, setDoc, getDoc, deleteDoc,
+collection, addDoc,
+onSnapshot, getDocs 
+} from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDuTxpGHgS1tFBgfXGqeaN5Ty7t5pZvEMA",
+    authDomain: "parking-lot-9b56a.firebaseapp.com",
+    projectId: "parking-lot-9b56a",
+    storageBucket: "parking-lot-9b56a.firebasestorage.app",
+    messagingSenderId: "685892511778",
+    appId: "1:685892511778:web:cc82b51daae29df348c27b",
+    measurementId: "G-8H0VJX47XZ"
+  };
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* 進場 */
+async function carIn(){
+    const plate = document.getElementById("plateIn").value.trim();
+    if(!plate) return alert("請輸入車牌");
+
+    const ref = doc(db,"parking",plate);
+    const snap = await getDoc(ref);
+
+    if(snap.exists()){
+        alert("已在場內");
+        return;
+    }
+
+    await setDoc(ref,{
+        plate:plate,
+        inTime:new Date()
+    });
+
+    document.getElementById("plateIn").value="";
+    loadStats();
+}
+
+/* 即時監聽場內車輛 */
+onSnapshot(collection(db,"parking"), (snapshot)=>{
+    currentCars = [];
+
+    snapshot.forEach(docSnap=>{
+        const data = docSnap.data();
+        currentCars.push(data);
+    });
+
+    renderCars(currentCars);
+});
+
+
+/* 離場 */
+async function carOut(plate){
+
+    const ref = doc(db,"parking",plate);
+    const snap = await getDoc(ref);
+    if(!snap.exists()) return;
+
+    const data = snap.data();
+    const inTime = data.inTime.toDate();
+    const now = new Date();
+    const minutes = Math.floor((now-inTime)/60000);
+
+    const feeData = calculateFee(minutes,inTime);
+
+    await addDoc(collection(db,"parking_history"),{
+        plate:plate,
+        inTime:inTime,
+        outTime:now,
+        fee:feeData.fee,
+        isHoliday:feeData.isHoliday
+    });
+
+    await deleteDoc(ref);
+    loadStats();
+}
+
+/* 計費 */
+function calculateFee(minutes,inTime){
+    const isHoliday = pricingMode === "holiday";
+    const hourRate = isHoliday ? 50 : 30;
+    const halfRate = hourRate/2;
+
+    if(minutes<=60){
+        return {fee:hourRate,isHoliday};
+    }
+
+    let remaining = minutes-60;
+    if(remaining%30<=3){
+        remaining -= remaining%30;
+    }
+
+    let halfUnits = Math.ceil(remaining/30);
+    return {
+        fee: hourRate + halfUnits*halfRate,
+        isHoliday
+    };
+}
+
+/* 今日營收統計 */
+async function loadStats(){
+
+    const snapshot = await getDocs(collection(db,"parking_history"));
+
+    let total=0;
+    let weekdayTotal=0;
+    let holidayTotal=0;
+    let todayCount=0;
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    snapshot.forEach(docSnap=>{
+        const data = docSnap.data();
+        const outTime = data.outTime.toDate();
+
+        if(outTime >= today){
+            total += data.fee;
+            todayCount++;
+
+            if(data.isHoliday){
+                holidayTotal += data.fee;
+            }else{
+                weekdayTotal += data.fee;
+            }
+        }
+    });
+
+    document.getElementById("stats").innerHTML=`
+        <div class="stat">
+        今日總營收：${total} 元 <br>
+        平日營收：${weekdayTotal} 元 <br>
+        假日營收：${holidayTotal} 元
+        </div>
+    `;
+
+    document.getElementById("todayCount").innerHTML=`
+        <div class="stat">
+        今日進場次數：${todayCount} 次
+        </div>
+    `;
+}
+
+
+function renderCars(carArray){
+
+    const carList = document.getElementById("carList");
+    carList.innerHTML="";
+
+    carArray.forEach(data=>{
+
+        const inTime = data.inTime.toDate();
+        const minutes = Math.floor((new Date()-inTime)/60000);
+        const feeData = calculateFee(minutes,inTime);
+
+        carList.innerHTML += `
+        <div class="card">
+            車牌：${data.plate} <br>
+            停車時間：${minutes} 分鐘 <br>
+            目前費用：${feeData.fee} 元
+            <br><button onclick="carOut('${data.plate}')">離場</button>
+        </div>
+        `;
+    });
+}
+
+function filterCars(){
+    const keyword = document.getElementById("searchInput").value.trim().toUpperCase();
+
+    const filtered = currentCars.filter(car =>
+        car.plate.toUpperCase().includes(keyword)
+    );
+
+    renderCars(filtered);
+}
+
+function setMode(mode){
+    pricingMode = mode;
+
+    document.getElementById("currentMode").innerText =
+        mode === "weekday" ? "平日" : "假日";
+    document.getElementById("weekdayBtn").classList.remove("active");
+    document.getElementById("holidayBtn").classList.remove("active");
+    
+    if(mode==="weekday"){
+        document.getElementById("weekdayBtn").classList.add("active");
+    }else{
+        document.getElementById("holidayBtn").classList.add("active");
+    }
+
+    // 重新渲染畫面讓費用更新
+    renderCars(currentCars);
+}
+
+/* 每秒重新渲染一次（自動更新分鐘與費用） */
+setInterval(()=>{
+    renderCars(currentCars);
+},1000);
+
+function toggleDarkMode(){
+    document.body.classList.toggle("dark");
+
+    const btn = document.getElementById("darkBtn");
+
+    if(document.body.classList.contains("dark")){
+        btn.innerText="☀️ 淺色模式";
+    }else{
+        btn.innerText="🌙 深色模式";
+    }
+}
+
+
+loadStats();
+
+window.carIn = carIn;
+window.carOut = carOut;
+window.filterCars = filterCars;
+window.setMode = setMode;
+window.toggleDarkMode = toggleDarkMode;
+
+</script>
+</body>
+</html>
