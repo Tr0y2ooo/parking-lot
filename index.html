@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta charset="UTF-8">
 <title>停車場管理系統</title>
 
@@ -164,7 +165,58 @@
     body.dark #currentMode{
         color:#ffd54f;
     }
+    /* ===== 手機版 RWD ===== */
+@media (max-width:768px){
 
+    body{
+        padding:15px;
+    }
+
+    .container{
+        padding:20px;
+        border-radius:12px;
+    }
+
+    input{
+        width:100% !important;
+        margin-bottom:10px;
+    }
+
+    button{
+        width:100%;
+        margin-top:6px;
+    }
+
+    #searchInput{
+        width:100% !important;
+    }
+
+    .card{
+        font-size:15px;
+        padding:15px;
+    }
+
+    h2{
+        font-size:20px;
+    }
+
+    .stat{
+        font-size:15px;
+    }
+
+}
+.mode-buttons{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+
+@media(max-width:768px){
+    .mode-buttons{
+        flex-direction:column;
+    }
+}
     
     </style>
     
@@ -179,7 +231,7 @@
 <hr>
 
 <h2>📅 計費模式</h2>
-<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+<div class="mode-buttons">
     <button onclick="setMode('weekday')" id="weekdayBtn">平日模式</button>
     <button onclick="setMode('holiday')" id="holidayBtn">假日模式</button>
     <span>目前模式：<span id="currentMode">平日</span></span>
@@ -446,4 +498,3 @@ window.toggleDarkMode = toggleDarkMode;
 </script>
 </body>
 </html>
-
