@@ -221,6 +221,9 @@ onSnapshot, getDocs
 } from 
 "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+import { serverTimestamp } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 const firebaseConfig = {
     apiKey: "AIzaSyDuTxpGHgS1tFBgfXGqeaN5Ty7t5pZvEMA",
     authDomain: "parking-lot-9b56a.firebaseapp.com",
@@ -248,8 +251,8 @@ async function carIn(){
     }
 
     await setDoc(ref,{
-        plate:plate,
-        inTime:new Date()
+    plate:plate,
+    inTime: serverTimestamp()
     });
 
     document.getElementById("plateIn").value="";
@@ -277,7 +280,9 @@ async function carOut(plate){
     if(!snap.exists()) return;
 
     const data = snap.data();
-    const inTime = data.inTime.toDate();
+    const inTime = data.inTime?.toDate
+        ? data.inTime.toDate()
+        : new Date(data.inTime);
     const now = new Date();
     const minutes = Math.floor((now-inTime)/60000);
 
